@@ -11,52 +11,49 @@
 #include <X11/XF86keysym.h>
 
 #ifndef DEFAULT_VOLUME
-#define DEFAULT_VOLUME (80);
+#define DEFAULT_VOLUME (0x80);
 #endif
 
 void handlekeypress(Display *dpy, XEvent *ev)
 {
 	static int vol = DEFAULT_VOLUME;
 	static int muted = 0;
-	char unmute[128];
-	char *cmd;
+	char cmd[128];
 	KeySym ks;
+	int svol;
 
 	ks = XKeycodeToKeysym(dpy, ev->xkey.keycode, 0);
 
 	if (muted) {
-		snprintf(unmute, sizeof(unmute), "aumix -v%d", vol);
-		cmd = unmute;
+		svol = vol;
 		muted = 0;
 	} else {
 		switch (ks) {
 		case XF86XK_AudioMute:
-			cmd = "aumix -v0";
+			svol = 0;
 			muted = 1;
 			break;
 		case XF86XK_AudioLowerVolume:
-			cmd = "aumix -v-5";
-			vol -= 5;
+			svol = vol -= 10;
 			break;
 		case XF86XK_AudioRaiseVolume:
-			cmd = "aumix -v+5";
-			vol += 5;
+			svol = vol += 10;
 			break;
 		default:
 			return;
 		}
 	}
+	snprintf(cmd, sizeof(cmd), "amixer set PCM %d", svol);
 
 	if (vol < 0) {
 		vol = 0;
-		cmd = NULL;
-	} else if (vol > 100) {
-		vol = 100;
-		cmd = NULL;
+		return;
+	} else if (vol > 255) {
+		vol = 255;
+		return;
 	}
 
-	if (cmd)
-		system(cmd);
+	system(cmd);
 }
 
 
